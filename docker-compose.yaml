@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  airflow-init:
+    image: apache/airflow:2.7.2-python3.10
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./logs:/opt/airflow/logs
+    entrypoint: /bin/bash
+    command: -c "airflow db init"
+
+  webserver:
+    image: apache/airflow:2.7.2-python3.10
+    depends_on:
+      - postgres
+      - airflow-init
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./logs:/opt/airflow/logs
+    command: webserver
+
+  scheduler:
+    image: apache/airflow:2.7.2-python3.10
+    depends_on:
+      - webserver
+    env_file:
+      - .env
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./logs:/opt/airflow/logs
+    command: scheduler
+
+volumes:
+  postgres_data:
